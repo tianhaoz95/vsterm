@@ -1,0 +1,27 @@
+{
+  "name": "vsterm",
+  "version": "0.1.0",
+  "description": "Local terminal bridge for vscode.dev",
+  "bin": {
+    "vsterm": "./bin/vsterm.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "preuninstall": "node scripts/preuninstall.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "binaries/"
+  ],
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  },
+  "keywords": ["vscode", "terminal", "vscode.dev"],
+  "license": "MIT"
+}
