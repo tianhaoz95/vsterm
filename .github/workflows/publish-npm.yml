@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get.outputs.version }}
-      already_published: ${{ steps.check.outputs.already_published }}
+      skip_github: ${{ steps.check_github.outputs.skip }}
+      skip_npm: ${{ steps.check_npm.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
         env:
@@ -21,8 +22,8 @@ jobs:
         id: get
         run: echo "version=$(jq -r .version npm/package.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Check if version already published
-        id: check
+      - name: Check if already published to GitHub Packages
+        id: check_github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -30,19 +31,20 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://npm.pkg.github.com/@tianhaoz95/vsterm/$VERSION")
-          if [ "$STATUS" = "200" ]; then
-            echo "already_published=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "already_published=false" >> "$GITHUB_OUTPUT"
-          fi
+          if [ "$STATUS" = "200" ]; then echo "skip=true"; else echo "skip=false"; fi >> "$GITHUB_OUTPUT"
 
-  build-and-publish:
+      - name: Check if already published to npm registry
+        id: check_npm
+        run: |
+          VERSION="${{ steps.get.outputs.version }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://registry.npmjs.org/@tianhaoz95/vsterm/$VERSION")
+          if [ "$STATUS" = "200" ]; then echo "skip=true"; else echo "skip=false"; fi >> "$GITHUB_OUTPUT"
+
+  build:
     needs: check-version
-    if: needs.check-version.outputs.already_published == 'false'
+    if: needs.check-version.outputs.skip_github == 'false' || needs.check-version.outputs.skip_npm == 'false'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +56,8 @@ jobs:
         with:
           go-version-file: daemon/go.mod
           cache-dependency-path: daemon/go.sum
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Run daemon tests
         working-directory: daemon
@@ -90,6 +94,36 @@ jobs:
           npm install
           VSTERM_SKIP_SERVICE=1 npm test
 
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: npm/binaries/
+          retention-days: 1
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+  publish-github:
+    needs: [check-version, build]
+    if: needs.check-version.outputs.skip_github == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: npm/binaries/
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
       - name: Configure registry → GitHub Packages
         uses: actions/setup-node@v4
         with:
@@ -105,6 +139,26 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VSTERM_SKIP_SERVICE: '1'
         run: npm publish
+
+  publish-npm:
+    needs: [check-version, build]
+    if: needs.check-version.outputs.skip_npm == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: npm/binaries/
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Configure registry → npmjs.org
         uses: actions/setup-node@v4
