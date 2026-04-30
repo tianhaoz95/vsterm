@@ -1,0 +1,100 @@
+name: Publish daemon to GitHub Packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'npm/package.json'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get.outputs.version }}
+      already_published: ${{ steps.check.outputs.already_published }}
+    steps:
+      - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Get version from npm/package.json
+        id: get
+        run: echo "version=$(jq -r .version npm/package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version already published
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get.outputs.version }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://npm.pkg.github.com/@tianhaoz95/vsterm/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-publish:
+    needs: check-version
+    if: needs.check-version.outputs.already_published == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache-dependency-path: daemon/go.sum
+
+      - name: Run daemon tests
+        working-directory: daemon
+        run: go test -timeout 30s ./...
+
+      - name: Build binaries for all platforms
+        run: |
+          mkdir -p npm/binaries
+          cd daemon
+          GOOS=darwin  GOARCH=arm64 go build -o ../npm/binaries/vsterm-darwin-arm64  .
+          GOOS=darwin  GOARCH=amd64 go build -o ../npm/binaries/vsterm-darwin-x64    .
+          GOOS=linux   GOARCH=arm64 go build -o ../npm/binaries/vsterm-linux-arm64   .
+          GOOS=linux   GOARCH=amd64 go build -o ../npm/binaries/vsterm-linux-x64     .
+          GOOS=windows GOARCH=amd64 go build -o ../npm/binaries/vsterm-win32-x64.exe .
+
+      - name: Verify binary sizes
+        run: |
+          for f in npm/binaries/*; do
+            size=$(stat -c%s "$f")
+            echo "$f: $(( size / 1024 / 1024 )) MB"
+            [ "$size" -lt 15728640 ] || (echo "ERROR: $f exceeds 15 MB limit" && exit 1)
+          done
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@tianhaoz95'
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Run npm tests
+        working-directory: npm
+        run: |
+          npm install
+          VSTERM_SKIP_SERVICE=1 npm test
+
+      - name: Publish to GitHub Packages
+        working-directory: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VSTERM_SKIP_SERVICE: '1'
+        run: npm publish

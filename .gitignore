@@ -2,7 +2,6 @@
 .DS_Store
 
 # Go
-daemon/go.sum
 npm/binaries/
 
 # Node

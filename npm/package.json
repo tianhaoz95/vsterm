@@ -1,5 +1,5 @@
 {
-  "name": "vsterm",
+  "name": "@tianhaoz95/vsterm",
   "version": "0.1.0",
   "description": "Local terminal bridge for vscode.dev",
   "bin": {
@@ -15,6 +15,13 @@
     "scripts/",
     "binaries/"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tianhaoz95/vsterm.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "devDependencies": {
     "jest": "^29.7.0"
   },
