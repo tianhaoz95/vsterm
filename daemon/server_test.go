@@ -101,14 +101,35 @@ func TestStatusEndpoint(t *testing.T) {
 
 func TestCORSHeader(t *testing.T) {
 	srv, _ := startTestServer(t)
+
+	// allowed origins are echoed back
+	for _, origin := range []string{
+		"https://vscode.dev",
+		"https://insiders.vscode.dev",
+		"https://v--abc123.vscode-cdn.net",
+		"http://localhost:5000",
+	} {
+		req, _ := http.NewRequest("GET", srv.URL+"/", nil)
+		req.Header.Set("Origin", origin)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("GET / with origin %q: %v", origin, err)
+		}
+		resp.Body.Close()
+		got := resp.Header.Get("Access-Control-Allow-Origin")
+		if got != origin {
+			t.Fatalf("origin %q: expected CORS header %q, got %q", origin, origin, got)
+		}
+	}
+
+	// requests with no origin get no CORS header
 	resp, err := http.Get(srv.URL + "/")
 	if err != nil {
 		t.Fatalf("GET /: %v", err)
 	}
-	defer resp.Body.Close()
-	got := resp.Header.Get("Access-Control-Allow-Origin")
-	if got != "https://vscode.dev" {
-		t.Fatalf("expected CORS header 'https://vscode.dev', got %q", got)
+	resp.Body.Close()
+	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("no-origin request: expected empty CORS header, got %q", got)
 	}
 }
 

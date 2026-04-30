@@ -13,27 +13,32 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		if origin == "" {
-			return true // direct connections (curl, tests)
-		}
-		if origin == "https://vscode.dev" {
-			return true
-		}
-		// allow any localhost origin (http://localhost, http://localhost:5000, etc.)
-		u, err := url.Parse(origin)
-		if err != nil {
-			return false
-		}
-		host := u.Hostname()
-		return host == "localhost" || host == "127.0.0.1" ||
-			strings.HasSuffix(host, ".localhost")
+		return isAllowedOrigin(r.Header.Get("Origin"))
 	},
+}
+
+func isAllowedOrigin(origin string) bool {
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	return host == "vscode.dev" ||
+		strings.HasSuffix(host, ".vscode.dev") ||
+		strings.HasSuffix(host, ".vscode-cdn.net") ||
+		host == "localhost" || host == "127.0.0.1" ||
+		strings.HasSuffix(host, ".localhost")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "https://vscode.dev")
+		origin := r.Header.Get("Origin")
+		if isAllowedOrigin(origin) && origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
 		next.ServeHTTP(w, r)
 	})
