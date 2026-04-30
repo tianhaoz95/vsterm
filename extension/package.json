@@ -1,6 +1,6 @@
 {
-  "name": "vsterm",
-  "displayName": "vsterm",
+  "name": "nano-vsterm",
+  "displayName": "nano-vsterm",
   "description": "Local terminal for vscode.dev via a local daemon",
   "version": "0.1.0",
   "publisher": "tianhaoz",
@@ -8,14 +8,14 @@
   "repository": { "type": "git", "url": "https://github.com/tianhaoz95/vsterm.git" },
   "license": "MIT",
   "categories": ["Other"],
-  "activationEvents": ["onCommand:vsterm.open"],
+  "activationEvents": ["onCommand:nano-vsterm.open"],
   "browser": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "vsterm.open",
+        "command": "nano-vsterm.open",
         "title": "Open Local Terminal",
-        "category": "vsterm"
+        "category": "nano-vsterm"
       }
     ]
   },

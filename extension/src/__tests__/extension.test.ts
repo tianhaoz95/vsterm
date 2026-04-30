@@ -16,7 +16,7 @@ describe('extension activation', () => {
   test('registers vsterm.open command', () => {
     activate(context);
     expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-      'vsterm.open',
+      'nano-vsterm.open',
       expect.any(Function)
     );
   });
