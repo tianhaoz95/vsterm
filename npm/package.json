@@ -19,9 +19,6 @@
     "type": "git",
     "url": "https://github.com/tianhaoz95/vsterm.git"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "devDependencies": {
     "jest": "^29.7.0"
   },
