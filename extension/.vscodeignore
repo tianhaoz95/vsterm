@@ -1,0 +1,8 @@
+.vscode-test-web/
+src/
+node_modules/
+out/
+*.vsix
+tsconfig.json
+webpack.config.js
+.vscodeignore
