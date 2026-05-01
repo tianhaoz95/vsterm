@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import WebSocket from 'ws';
 
 const DAEMON_URL = 'ws://127.0.0.1:7007/ws';
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
@@ -58,25 +58,25 @@ class WsBridge {
       return;
     }
 
-    this.ws.onopen = () => {
+    this.ws.on('open', () => {
       this.attempt = 0;
       this.panel.webview.postMessage({ type: '__connected' });
-    };
+    });
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    this.ws.on('message', (data) => {
       try {
-        const msg = JSON.parse(event.data as string);
+        const msg = JSON.parse(data.toString());
         this.panel.webview.postMessage(msg);
       } catch { /* ignore malformed */ }
-    };
+    });
 
-    this.ws.onerror = () => { /* onclose will fire */ };
+    this.ws.on('error', () => { /* close will fire */ });
 
-    this.ws.onclose = () => {
+    this.ws.on('close', () => {
       if (this.disposed) return;
       this.panel.webview.postMessage({ type: 'daemon_disconnected' });
       this.scheduleReconnect();
-    };
+    });
   }
 
   private scheduleReconnect(): void {
@@ -98,7 +98,7 @@ class WsBridge {
     this.disposed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.ws) {
-      this.ws.onclose = null;
+      this.ws.removeAllListeners();
       this.ws.close();
     }
   }

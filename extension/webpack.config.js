@@ -4,7 +4,7 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  target: 'webworker',
+  target: 'node',
   entry: './src/extension.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -16,12 +16,6 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.js'],
-    fallback: {
-      path: false,
-      fs: false,
-      os: false,
-      crypto: false,
-    },
   },
   module: {
     rules: [
