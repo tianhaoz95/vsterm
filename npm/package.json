@@ -1,6 +1,6 @@
 {
   "name": "@tianhaoz95/vsterm",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local terminal bridge for vscode.dev",
   "bin": {
     "vsterm": "./bin/vsterm.js"

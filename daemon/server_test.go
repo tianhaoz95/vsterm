@@ -102,12 +102,13 @@ func TestStatusEndpoint(t *testing.T) {
 func TestCORSHeader(t *testing.T) {
 	srv, _ := startTestServer(t)
 
-	// allowed origins are echoed back
+	// all origins are echoed back
 	for _, origin := range []string{
 		"https://vscode.dev",
 		"https://insiders.vscode.dev",
 		"https://v--abc123.vscode-cdn.net",
 		"http://localhost:5000",
+		"http://code-server.example.com:8080",
 	} {
 		req, _ := http.NewRequest("GET", srv.URL+"/", nil)
 		req.Header.Set("Origin", origin)

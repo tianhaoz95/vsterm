@@ -5,38 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return isAllowedOrigin(r.Header.Get("Origin"))
-	},
-}
-
-func isAllowedOrigin(origin string) bool {
-	if origin == "" {
-		return true
-	}
-	u, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-	host := u.Hostname()
-	return host == "vscode.dev" ||
-		strings.HasSuffix(host, ".vscode.dev") ||
-		strings.HasSuffix(host, ".vscode-cdn.net") ||
-		host == "localhost" || host == "127.0.0.1" ||
-		strings.HasSuffix(host, ".localhost")
+	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if isAllowedOrigin(origin) && origin != "" {
+		if origin := r.Header.Get("Origin"); origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
